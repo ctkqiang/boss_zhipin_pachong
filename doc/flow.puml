@@ -1,0 +1,44 @@
+@startuml BOSS直聘爬虫系统流程
+
+skinparam backgroundColor white
+skinparam handwritten false
+
+title BOSS直聘爬虫系统流程图
+
+actor User
+participant "REST API" as API
+participant "爬虫服务" as Scraper
+participant "数据库" as DB
+
+User -> API: 发送搜索请求\n(关键词)
+activate API
+
+API -> Scraper: 调用爬虫服务
+activate Scraper
+
+Scraper -> Scraper: 构造查询URL
+Scraper -> Scraper: 设置请求头
+
+alt HTML响应
+    Scraper -> Scraper: 解析HTML职位卡片
+else JSON响应
+    Scraper -> Scraper: 解析JSON数据
+end
+
+alt 访问限制 (code=35)
+    Scraper --> API: 抛出异常
+    API --> User: 返回错误信息
+else 正常响应
+    Scraper -> Scraper: 提取职位信息
+    Scraper -> DB: 保存职位数据
+    activate DB
+    DB --> Scraper: 保存完成
+    deactivate DB
+    Scraper --> API: 返回职位列表
+    API --> User: 返回JSON结果
+end
+
+deactivate Scraper
+deactivate API
+
+@enduml
