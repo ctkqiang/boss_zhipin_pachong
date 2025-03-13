@@ -33,7 +33,7 @@ public class API {
     public List<Job> GetJob() {
         try {
             return this.scrapper.ScrapeJob("Java");
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             LOG.error("爬取职位信息失败: {}", e.getMessage());
             return new ArrayList<>();
         }

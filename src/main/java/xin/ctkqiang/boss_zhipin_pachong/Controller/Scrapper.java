@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import xin.ctkqiang.boss_zhipin_pachong.Database.Constant;
 import xin.ctkqiang.boss_zhipin_pachong.Model.Job;
 
+import org.json.JSONObject;
+import org.json.JSONArray;
+
 @Service
 public class Scrapper {
     private static final Logger LOG = LoggerFactory.getLogger(Scrapper.class);
@@ -26,8 +29,8 @@ public class Scrapper {
         return Scrapper.Url + "?query=" + Param + "&city=100010000";
     }
 
-    public List<Job> ScrapeJob(@NonNull String Param) throws IOException, InterruptedException {
-        final String JobUrl = this.GetQueryUrl(Param);
+    public List<Job> ScrapeJob(@NonNull String Param) throws IOException {
+        String JobUrl = this.GetQueryUrl(Param);
         List<Job> jobs = new ArrayList<>();
 
         LOG.info("爬取网址: {}", JobUrl);
@@ -35,60 +38,63 @@ public class Scrapper {
         try {
             Document document = Jsoup.connect(JobUrl)
                     .userAgent(
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-                    .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-                    .header("Cache-Control", "no-cache")
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+                    .header("Accept",
+                            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7")
+                    .header("Cache-Control", "max-age=0")
                     .header("Connection", "keep-alive")
-                    .header("sec-ch-ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
+                    .header("Host", "www.zhipin.com")
+                    .header("sec-ch-ua",
+                            "\"Chromium\";v=\"122\", \"Google Chrome\";v=\"122\", \"Not(A:Brand\";v=\"24\"")
                     .header("sec-ch-ua-mobile", "?0")
                     .header("sec-ch-ua-platform", "\"macOS\"")
                     .header("Sec-Fetch-Dest", "document")
                     .header("Sec-Fetch-Mode", "navigate")
                     .header("Sec-Fetch-Site", "none")
                     .header("Sec-Fetch-User", "?1")
-                    .referrer("https://www.zhipin.com")
-                    .timeout(60000)
+                    .header("Upgrade-Insecure-Requests", "1")
+                    .ignoreContentType(true)
+                    .timeout(30000)
                     .maxBodySize(0)
                     .followRedirects(true)
                     .get();
 
-            // Wait for JavaScript content to load
-            Thread.sleep(2000);
+            String jsonResponse = document.text();
+            LOG.info("API Response: {}", jsonResponse);
 
-            // 移除登录弹窗
-            Elements loginDialog = document.select("div.boss-login-dialog");
-            if (!loginDialog.isEmpty()) {
-                loginDialog.remove();
-                LOG.info("已移除登录弹窗");
-            }
+            JSONObject json = new JSONObject(jsonResponse);
 
-            LOG.info("成功连接到目标网址");
-            Elements jobCards = document.select("div.job-list ul li"); // 更新选择器
+            if (json.getInt("code") == 0 && json.has("zpData")) {
+                JSONObject zpData = json.getJSONObject("zpData");
+                String htmlContent = zpData.getString("html");
 
-            for (Element card : jobCards) {
+                if (!htmlContent.isEmpty()) {
+                    Document jobDocument = Jsoup.parse(htmlContent);
+                    Elements jobCards = jobDocument.select(".item");
 
-                String title = card.select("div.job-title").text();
-                String company = card.select("div.company-text").text();
-                String salary = card.select("span.red").text();
-                String location = card.select("span.job-area").text();
-                String experience = card.select("div.job-limit").text();
-                String[] tags = card.select("div.tags").text().split("\\s+");
-                String description = card.select("div.info-desc").text();
-                String companyInfo = card.select("div.company-info").text();
+                    for (Element card : jobCards) {
+                        String title = card.select(".title-text").text();
+                        String salary = card.select(".salary").text();
+                        String company = card.select(".company").text();
+                        String location = card.select(".workplace").text();
 
-                Job job = new Job(
-                        title,
-                        company,
-                        salary,
-                        location,
-                        experience,
-                        tags,
-                        description,
-                        companyInfo);
+                        Elements labelElements = card.select(".labels span");
+                        String experience = labelElements.first() != null ? labelElements.first().text() : "";
+                        String[] tags = labelElements.stream()
+                                .map(Element::text)
+                                .toArray(String[]::new);
 
-                jobs.add(job);
+                        String description = "";
+                        String companyInfo = card.select(".name").text();
 
+                        if (!title.isEmpty() && !company.isEmpty()) {
+                            jobs.add(new Job(title, company, salary, location,
+                                    experience, tags, description, companyInfo));
+                            LOG.info("已添加职位: {}", title);
+                        }
+                    }
+                }
             }
 
             LOG.info("已找到 {} 个职位信息", jobs.size());
