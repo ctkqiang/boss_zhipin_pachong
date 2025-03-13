@@ -1,7 +1,0 @@
-2025-03-13 19:03:56.220  INFO 80176 --- [nio-8080-exec-1] x.c.b.Controller.Scrapper                : 爬取网址: https://www.zhipin.com/wapi/zpgeek/mobile/search/joblist.json?query=Java&city=100010000
-2025-03-13 19:04:11.537 ERROR 80176 --- [nio-8080-exec-1] x.c.b.Controller.Scrapper                : 网络连接失败: Read timed out
-2025-03-13 19:04:11.539 ERROR 80176 --- [nio-8080-exec-1] x.c.boss_zhipin_pachong.Controller.API   : 爬取职位信息失败: Read timed out
-2025-03-13 19:04:11.612 ERROR 80176 --- [nio-8080-exec-2] x.c.b.Controller.Scrapper                : 网络连接失败: Read timed out
-2025-03-13 19:04:11.613 ERROR 80176 --- [nio-8080-exec-2] x.c.boss_zhipin_pachong.Controller.API   : 爬取职位信息失败: Read timed out
-2025-03-13 19:04:15.814 ERROR 80176 --- [nio-8080-exec-1] x.c.b.Controller.Scrapper                : 网络连接失败: Read timed out
-2025-03-13 19:04:15.815 ERROR 80176 --- [nio-8080-exec-1] x.c.boss_zhipin_pachong.Controller.API   : 爬取职位信息失败: Read timed out
