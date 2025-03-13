@@ -72,6 +72,12 @@
 			<artifactId>json</artifactId>
 			<version>20231013</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+			<version>3.45.1.0</version>
+		</dependency>
 		
 	</dependencies>
 

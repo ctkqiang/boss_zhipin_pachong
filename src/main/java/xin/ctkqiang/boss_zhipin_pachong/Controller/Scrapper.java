@@ -10,25 +10,100 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import xin.ctkqiang.boss_zhipin_pachong.Database.Constant;
+import xin.ctkqiang.boss_zhipin_pachong.Database.DatabaseHandler;
 import xin.ctkqiang.boss_zhipin_pachong.Model.Job;
 
 import org.json.JSONObject;
 
+/**
+ * BOSS直聘职位爬虫服务类
+ * 
+ * 该类主要负责从BOSS直聘网站抓取职位信息，包括以下核心功能：
+ * 1. 自动构造搜索URL并发送HTTP请求
+ * 2. 智能解析返回的HTML和JSON数据
+ * 3. 提取职位详细信息，包括：
+ * - 职位名称
+ * - 公司名称
+ * - 工作地点
+ * - 薪资范围
+ * - 经验要求
+ * - 技能要求
+ * 4. 自动检测并处理反爬虫限制
+ * 5. 将抓取的数据保存到SQLite数据库
+ * 
+ * 使用示例：
+ * 
+ * <pre>
+ * Scrapper scrapper = new Scrapper();
+ * List<Job> jobs = scrapper.ScrapeJob("Java开发");
+ * </pre>
+ * 
+ * 技术特点：
+ * - 使用JSoup进行HTML解析
+ * - 支持JSON格式数据处理
+ * - 采用Spring框架进行依赖注入
+ * - 实现数据持久化存储
+ * 
+ * 注意事项：
+ * 1. 访问频率限制：建议每次请求间隔不少于1秒
+ * 2. 反爬虫处理：遇到code=35时会抛出IOException
+ * 3. 数据完整性：确保所有必要字段都已正确提取
+ * 4. 内存管理：大量数据时注意内存使用
+ */
 @Service
 public class Scrapper {
+    @Autowired
+    private DatabaseHandler databaseHandler;
     private static final Logger LOG = LoggerFactory.getLogger(Scrapper.class);
     private static final String Url = Constant.BASE_URL;
 
-    // 生成查询 URL
+    /**
+     * 生成查询URL
+     * 
+     * 根据搜索关键词构造完整的BOSS直聘搜索URL，包含以下参数：
+     * - query: 搜索关键词
+     * - city: 城市代码（默认100010000）
+     * - page: 页码（默认1）
+     * - pageSize: 每页数量（默认10）
+     * 
+     * @param Param 搜索关键词（不能为null）
+     * @return 完整的查询URL字符串
+     * @throws AssertionError 当Param为null时抛出
+     */
     private String GetQueryUrl(String Param) {
         assert (Param != null);
         return Scrapper.Url + "?query=" + Param + "&city=100010000&page=1&pageSize=10";
     }
 
+    /**
+     * 抓取职位信息
+     * 
+     * 执行完整的职位信息抓取流程：
+     * 1. 构造并发送HTTP请求
+     * 2. 智能识别响应格式（HTML/JSON）
+     * 3. 解析职位数据
+     * 4. 提取关键信息
+     * 5. 保存到数据库
+     * 
+     * 响应处理逻辑：
+     * - HTML响应：使用CSS选择器提取数据
+     * - JSON响应：解析zpData中的职位信息
+     * 
+     * 异常处理：
+     * - 访问限制：抛出IOException
+     * - 解析错误：记录日志并继续处理
+     * - 网络错误：抛出IOException
+     * 
+     * @param Param 搜索关键词
+     * @return 职位信息列表
+     * @throws IOException          当网络请求失败或触发反爬虫机制时
+     * @throws NullPointerException 当参数为null时
+     */
     public List<Job> ScrapeJob(@NonNull String Param) throws IOException {
         String JobUrl = this.GetQueryUrl(Param);
         List<Job> jobs = new ArrayList<>();
@@ -123,10 +198,10 @@ public class Scrapper {
                         }
 
                         jobs.add(new Job(
-                                title, // 职位标题 from lines[0]
-                                actualCompanyName, // 公司名称 from tagList[0]
+                                title, // 职位标题
+                                location, // 公司名称 (lines[1])
                                 salary, // 薪资
-                                location, // 位置
+                                actualCompanyName, // 位置 (从标签获取)
                                 experience, // 经验要求
                                 skills.toArray(new String[0]),
                                 "",
@@ -141,9 +216,10 @@ public class Scrapper {
             }
 
             if (jobs.isEmpty()) {
-                LOG.info("总共没有个职位信息", jobs.size());
+                LOG.info("没有找到职位信息");
             } else {
-                LOG.info("总共找到 {} 个职位信息", jobs.size());
+                LOG.info("共找到 {} 个职位信息", jobs.size());
+                databaseHandler.saveJobs(jobs); // Save jobs to database
             }
             return jobs;
         } catch (IOException e) {
