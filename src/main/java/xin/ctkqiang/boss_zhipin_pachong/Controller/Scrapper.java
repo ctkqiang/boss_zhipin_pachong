@@ -1,8 +1,8 @@
 package xin.ctkqiang.boss_zhipin_pachong.Controller;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -17,90 +17,137 @@ import xin.ctkqiang.boss_zhipin_pachong.Database.Constant;
 import xin.ctkqiang.boss_zhipin_pachong.Model.Job;
 
 import org.json.JSONObject;
-import org.json.JSONArray;
 
 @Service
 public class Scrapper {
     private static final Logger LOG = LoggerFactory.getLogger(Scrapper.class);
     private static final String Url = Constant.BASE_URL;
 
+    // 生成查询 URL
     private String GetQueryUrl(String Param) {
         assert (Param != null);
-        return Scrapper.Url + "?query=" + Param + "&city=100010000";
+        return Scrapper.Url + "?query=" + Param + "&city=100010000&page=1&pageSize=10";
     }
 
     public List<Job> ScrapeJob(@NonNull String Param) throws IOException {
         String JobUrl = this.GetQueryUrl(Param);
         List<Job> jobs = new ArrayList<>();
 
-        LOG.info("爬取网址: {}", JobUrl);
-
         try {
             Document document = Jsoup.connect(JobUrl)
                     .userAgent(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-                    .header("Accept",
-                            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-                    .header("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7")
-                    .header("Cache-Control", "max-age=0")
-                    .header("Connection", "keep-alive")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                    .header("Cache-Control", "no-cache")
                     .header("Host", "www.zhipin.com")
+                    .header("Referer", "https://www.zhipin.com/web/geek/job")
                     .header("sec-ch-ua",
                             "\"Chromium\";v=\"122\", \"Google Chrome\";v=\"122\", \"Not(A:Brand\";v=\"24\"")
-                    .header("sec-ch-ua-mobile", "?0")
                     .header("sec-ch-ua-platform", "\"macOS\"")
-                    .header("Sec-Fetch-Dest", "document")
-                    .header("Sec-Fetch-Mode", "navigate")
-                    .header("Sec-Fetch-Site", "none")
-                    .header("Sec-Fetch-User", "?1")
-                    .header("Upgrade-Insecure-Requests", "1")
+                    .header("Sec-Fetch-Site", "same-origin")
+                    .header("Sec-Fetch-Mode", "cors")
+                    .header("Sec-Fetch-Dest", "empty")
                     .ignoreContentType(true)
-                    .timeout(30000)
-                    .maxBodySize(0)
-                    .followRedirects(true)
+                    .timeout(300000)
                     .get();
 
             String jsonResponse = document.text();
-            LOG.info("API Response: {}", jsonResponse);
+
+            if (jsonResponse.trim().startsWith("<!DOCTYPE html>") || jsonResponse.trim().startsWith("<html>")) {
+                Elements jobCards = document.select(".job-list-box .job-primary");
+
+                for (Element card : jobCards) {
+                    String title = card.select(".job-name").text();
+                    String salary = card.select(".red").text();
+                    String company = card.select(".company-text").text();
+                    String location = card.select(".job-area").text();
+
+                    Elements tagElements = card.select(".tags .tag-item");
+                    String[] tags = tagElements.stream()
+                            .map(Element::text)
+                            .toArray(String[]::new);
+
+                    String experience = tagElements.first() != null ? tagElements.first().text() : "";
+
+                    if (!title.isEmpty() && !company.isEmpty()) {
+                        jobs.add(new Job(title, company, salary, location, experience, tags, "", company));
+                        LOG.info("找到职位: {} 于 {}", title, company);
+                    }
+                }
+                return jobs;
+            }
 
             JSONObject json = new JSONObject(jsonResponse);
 
-            if (json.getInt("code") == 0 && json.has("zpData")) {
+            if (json.getInt("code") == 35) {
+                LOG.error("BOSS直聘提醒：当前访问量较大，请稍后再试。");
+                throw new IOException("BOSS直聘访问限制");
+            }
+
+            if (json.has("code") && json.getInt("code") == 0 && json.has("zpData")) {
                 JSONObject zpData = json.getJSONObject("zpData");
-                String htmlContent = zpData.getString("html");
+                String html = zpData.getString("html");
 
-                if (!htmlContent.isEmpty()) {
-                    Document jobDocument = Jsoup.parse(htmlContent);
-                    Elements jobCards = jobDocument.select(".item");
+                String[] jobEntries = html.split("\n \n \n \n");
 
-                    for (Element card : jobCards) {
-                        String title = card.select(".title-text").text();
-                        String salary = card.select(".salary").text();
-                        String company = card.select(".company").text();
-                        String location = card.select(".workplace").text();
+                for (String entry : jobEntries) {
+                    try {
+                        if (entry.trim().isEmpty())
+                            continue;
 
-                        Elements labelElements = card.select(".labels span");
-                        String experience = labelElements.first() != null ? labelElements.first().text() : "";
-                        String[] tags = labelElements.stream()
-                                .map(Element::text)
-                                .toArray(String[]::new);
+                        String[] lines = entry.split("\n");
+                        if (lines.length < 4)
+                            continue;
 
-                        String description = "";
-                        String companyInfo = card.select(".name").text();
+                        String title = lines[0].trim();
+                        String salary = lines[4].trim();
+                        String location = lines[1].trim();
+                        String experience = "";
+                        List<String> skills = new ArrayList<>();
+                        String actualCompanyName = "";
 
-                        if (!title.isEmpty() && !company.isEmpty()) {
-                            jobs.add(new Job(title, company, salary, location,
-                                    experience, tags, description, companyInfo));
-                            LOG.info("已添加职位: {}", title);
+                        for (int i = 6; i < lines.length; i++) {
+                            String line = lines[i].trim();
+                            if (line.contains("立即沟通"))
+                                break;
+                            if (i == 6) {
+                                actualCompanyName = line; // 第一个标签是公司名称
+                            } else if (i == 7) {
+                                location = line; // 第二个标签是地点
+                            } else if (line.contains("年")) {
+                                experience = line;
+                            } else if (!line.isEmpty()) {
+                                skills.add(line);
+                            }
                         }
+
+                        jobs.add(new Job(
+                                title, // 职位标题 from lines[0]
+                                actualCompanyName, // 公司名称 from tagList[0]
+                                salary, // 薪资
+                                location, // 位置
+                                experience, // 经验要求
+                                skills.toArray(new String[0]),
+                                "",
+                                ""));
+
+                        LOG.info("成功解析职位: {} | {} | {} | {}", title, actualCompanyName, salary,
+                                location);
+                    } catch (Exception e) {
+                        LOG.error("解析职位条目时出错: {}", e.getMessage());
                     }
                 }
             }
 
-            LOG.info("已找到 {} 个职位信息", jobs.size());
+            if (jobs.isEmpty()) {
+                LOG.info("总共没有个职位信息", jobs.size());
+            } else {
+                LOG.info("总共找到 {} 个职位信息", jobs.size());
+            }
             return jobs;
         } catch (IOException e) {
-            LOG.error("网络连接失败: {}", e.getMessage());
+            LOG.error("网络请求失败: {}", e.getMessage());
             throw e;
         }
     }

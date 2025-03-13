@@ -10,16 +10,23 @@ public class Job {
     private String PersonInCharge;
     private String url;
 
-    public Job(String Title, String Salary, String CompanyName, String Location, String Description, String[] TagList,
+    public Job(String Title, String CompanyName, String Salary, String Location, String Description, String[] TagList,
             String PersonInCharge, String url) {
         this.Title = Title;
-        this.Salary = Salary;
         this.CompanyName = CompanyName;
+        this.Salary = Salary.replaceAll("·\\d+薪", ""); // Remove "·14薪" etc.
         this.Location = Location;
         this.Description = Description;
         this.TagList = TagList;
-        this.PersonInCharge = PersonInCharge;
+        this.PersonInCharge = PersonInCharge.replaceAll("·.*$", ""); // Clean up title suffix
         this.url = url;
+    }
+
+    // Add toString method for better logging
+    @Override
+    public String toString() {
+        return String.format("%s | %s | %s | %s | %s",
+                Title, CompanyName, Salary, Location, PersonInCharge);
     }
 
     public void setTitle(String title) {
