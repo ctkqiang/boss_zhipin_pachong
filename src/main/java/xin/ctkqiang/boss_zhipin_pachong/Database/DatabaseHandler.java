@@ -3,8 +3,10 @@ package xin.ctkqiang.boss_zhipin_pachong.Database;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -162,4 +164,34 @@ public class DatabaseHandler {
             LOG.error("关闭数据库连接失败: {}", e.getMessage());
         }
     }
+
+    public List<Job> getAllJobs() {
+        List<Job> jobs = new ArrayList<>();
+        String sql = "SELECT * FROM jobs";
+
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String[] skills = rs.getString("skills") != null ? rs.getString("skills").split(",") : new String[0];
+
+                Job job = new Job(
+                        rs.getString("title"),
+                        rs.getString("company"), // Changed from company_name to company
+                        rs.getString("salary"),
+                        rs.getString("location"),
+                        rs.getString("experience"),
+                        skills,
+                        "", // contact_url is not in the schema
+                        "" // company_info is not in the schema
+                );
+                jobs.add(job);
+            }
+        } catch (SQLException e) {
+            LOG.error("获取职位信息失败: {}", e.getMessage());
+        }
+
+        return jobs;
+    }
+
 }

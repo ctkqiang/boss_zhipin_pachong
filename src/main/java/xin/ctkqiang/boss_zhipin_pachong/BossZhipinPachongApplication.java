@@ -11,7 +11,6 @@ public class BossZhipinPachongApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BossZhipinPachongApplication.class, args);
-
 		SystemInfo();
 	}
 

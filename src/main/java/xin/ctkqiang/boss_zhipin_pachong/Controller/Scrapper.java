@@ -77,6 +77,7 @@ public class Scrapper {
      */
     private String GetQueryUrl(String Param) {
         assert (Param != null);
+        LOG.debug("职位关键词： " + Param);
         return Scrapper.Url + "?query=" + Param + "&city=100010000&page=1&pageSize=10";
     }
 
@@ -108,6 +109,10 @@ public class Scrapper {
         String JobUrl = this.GetQueryUrl(Param);
         List<Job> jobs = new ArrayList<>();
 
+        if (Param == null) {
+            throw new NullPointerException("搜索关键词不能为空");
+        }
+
         try {
             Document document = Jsoup.connect(JobUrl)
                     .userAgent(
@@ -128,6 +133,8 @@ public class Scrapper {
                     .get();
 
             String jsonResponse = document.text();
+
+            LOG.debug(jsonResponse);
 
             if (jsonResponse.trim().startsWith("<!DOCTYPE html>") || jsonResponse.trim().startsWith("<html>")) {
                 Elements jobCards = document.select(".job-list-box .job-primary");
@@ -157,7 +164,7 @@ public class Scrapper {
 
             if (json.getInt("code") == 35) {
                 LOG.error("BOSS直聘提醒：当前访问量较大，请稍后再试。");
-                throw new IOException("BOSS直聘访问限制");
+                throw new IOException("BOSS直聘提醒：当前访问量较大，请稍后再试。");
             }
 
             if (json.has("code") && json.getInt("code") == 0 && json.has("zpData")) {
@@ -181,6 +188,14 @@ public class Scrapper {
                         String experience = "";
                         List<String> skills = new ArrayList<>();
                         String actualCompanyName = "";
+                        String contactUrl = ""; // 新增联系URL字段
+
+                        // 从HTML中提取联系URL
+                        if (entry.contains("data-url=\"")) {
+                            int startIndex = entry.indexOf("data-url=\"") + 10;
+                            int endIndex = entry.indexOf("\"", startIndex);
+                            contactUrl = "https://www.zhipin.com" + entry.substring(startIndex, endIndex);
+                        }
 
                         for (int i = 6; i < lines.length; i++) {
                             String line = lines[i].trim();
@@ -205,7 +220,8 @@ public class Scrapper {
                                 experience, // 经验要求
                                 skills.toArray(new String[0]),
                                 "",
-                                ""));
+                                contactUrl // 添加联系URL
+                        ));
 
                         LOG.info("成功解析职位: {} | {} | {} | {}", title, actualCompanyName, salary,
                                 location);
@@ -219,8 +235,22 @@ public class Scrapper {
                 LOG.info("没有找到职位信息");
             } else {
                 LOG.info("共找到 {} 个职位信息", jobs.size());
-                databaseHandler.saveJobs(jobs); // Save jobs to database
+                LOG.info("========== 职位列表 ==========");
+
+                for (Job job : jobs) {
+                    LOG.info("\n职位: {}\n公司: {}\n薪资: {}\n地点: {}\n经验: {}\n技能: {}\n------------------------",
+                            job.getTitle(),
+                            job.getCompanyName(),
+                            job.getSalary(),
+                            job.getLocation(),
+                            job.getDescription(),
+                            String.join(", ", job.getTagList()));
+                }
+
+                LOG.info("============================");
+                databaseHandler.saveJobs(jobs);
             }
+
             return jobs;
         } catch (IOException e) {
             LOG.error("网络请求失败: {}", e.getMessage());

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>薪资分析 - BOSS直聘数据</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #ff69b4;
+        --secondary-color: #ffb6c1;
+        --accent-color: #ffc0cb;
+      }
+
+      .chart-container {
+        background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(255, 105, 180, 0.1);
+      }
+
+      .bar {
+        fill: var(--primary-color);
+        transition: all 0.3s ease;
+      }
+
+      .bar:hover {
+        fill: var(--secondary-color);
+        filter: drop-shadow(0 0 5px rgba(255, 105, 180, 0.5));
+      }
+
+      .dot {
+        fill: var(--primary-color);
+        filter: drop-shadow(0 0 3px rgba(255, 105, 180, 0.3));
+      }
+
+      .chart-title {
+        color: var(--primary-color);
+        font-family: "Microsoft YaHei", sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-pink-50">
+    <!-- Update navbar -->
+    <nav class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between h-16">
+          <div class="flex">
+            <div class="flex-shrink-0 flex items-center">
+              <span class="text-xl font-bold text-pink-500"
+                >BOSS直聘数据分析</span
+              >
+            </div>
+            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <a
+                href="/"
+                class="border-transparent text-gray-500 hover:text-pink-400 hover:border-pink-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                返回首页
+              </a>
+              <a
+                href="/analysis"
+                class="border-pink-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                薪资分析
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Update main content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="animate__animated animate__fadeIn">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div class="bg-gradient-to-r from-pink-400 to-pink-500 px-6 py-4">
+            <h3 class="text-lg font-medium text-white">✨ 薪资分布分析</h3>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="chart-container p-6">
+                <h4 class="chart-title text-lg font-medium mb-4">
+                  💰 薪资范围分布
+                </h4>
+                <div id="salaryChart" class="w-full h-80"></div>
+              </div>
+              <div class="chart-container p-6">
+                <h4 class="chart-title text-lg font-medium mb-4">
+                  📈 平均薪资趋势
+                </h4>
+                <div id="averageSalaryChart" class="w-full h-80"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Update chart colors and animations
+      const CHART_COLORS = {
+        primary: "#FF69B4",
+        secondary: "#FFB6C1",
+        gradient: ["#FFC0CB", "#FF69B4"]
+      };
+
+      async function fetchSalaryData() {
+        try {
+          const response = await fetch("/api/analysis/salary");
+          return await response.json();
+        } catch (error) {
+          console.error("Error fetching salary data:", error);
+          return [];
+        }
+      }
+
+      function createSalaryRangeChart(data) {
+        const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+        const width =
+          document.getElementById("salaryChart").clientWidth -
+          margin.left -
+          margin.right;
+        const height =
+          document.getElementById("salaryChart").clientHeight -
+          margin.top -
+          margin.bottom;
+
+        const svg = d3
+          .select("#salaryChart")
+          .append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleBand().range([0, width]).padding(0.1);
+
+        const y = d3.scaleLinear().range([height, 0]);
+
+        x.domain(data.map((d) => d.range));
+        y.domain([0, d3.max(data, (d) => d.count)]);
+
+        svg
+          .append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x))
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-45)");
+
+        svg.append("g").call(d3.axisLeft(y));
+
+        // Add animated bars
+        svg
+          .selectAll(".bar")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", (d) => x(d.range))
+          .attr("width", x.bandwidth())
+          .attr("y", height) // Start from bottom
+          .attr("height", 0) // Start with height 0
+          .attr("fill", "#4F46E5")
+          .attr("opacity", 0.8)
+          // Add tooltip
+          .append("title")
+          .text((d) => `${d.range}: ${d.count} 个职位`)
+
+          // Animate the bars
+          .selection()
+          .transition()
+          .duration(1000)
+          .delay((d, i) => i * 100)
+          .attr("y", (d) => y(d.count))
+          .attr("height", (d) => height - y(d.count));
+
+        // Add value labels on top of bars
+        svg
+          .selectAll(".label")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("class", "label")
+          .attr("x", (d) => x(d.range) + x.bandwidth() / 2)
+          .attr("y", height)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#4F46E5")
+          .text((d) => d.count)
+          .transition()
+          .duration(1000)
+          .delay((d, i) => i * 100)
+          .attr("y", (d) => y(d.count) - 5);
+      }
+
+      function createAverageSalaryChart(data) {
+        const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+        const width =
+          document.getElementById("averageSalaryChart").clientWidth -
+          margin.left -
+          margin.right;
+        const height =
+          document.getElementById("averageSalaryChart").clientHeight -
+          margin.top -
+          margin.bottom;
+
+        const svg = d3
+          .select("#averageSalaryChart")
+          .append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().range([0, width]);
+
+        const y = d3.scaleLinear().range([height, 0]);
+
+        const line = d3
+          .line()
+          .x((d) => x(d.date))
+          .y((d) => y(d.average));
+
+        x.domain(d3.extent(data, (d) => d.date));
+        y.domain([0, d3.max(data, (d) => d.average)]);
+
+        svg
+          .append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x));
+
+        svg.append("g").call(d3.axisLeft(y));
+
+        svg
+          .append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", "#4F46E5")
+          .attr("stroke-width", 2)
+          .attr("d", line);
+
+        // Add gradient
+        const gradient = svg
+          .append("defs")
+          .append("linearGradient")
+          .attr("id", "line-gradient")
+          .attr("gradientUnits", "userSpaceOnUse")
+          .attr("x1", 0)
+          .attr("y1", y(0))
+          .attr("x2", 0)
+          .attr("y2", y(d3.max(data, (d) => d.average)));
+
+        gradient
+          .append("stop")
+          .attr("offset", "0%")
+          .attr("stop-color", "#4F46E5")
+          .attr("stop-opacity", 0.1);
+
+        gradient
+          .append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", "#4F46E5")
+          .attr("stop-opacity", 0.8);
+
+        // Add area under the line
+        const area = d3
+          .area()
+          .x((d) => x(d.date))
+          .y0(height)
+          .y1((d) => y(d.average));
+
+        svg
+          .append("path")
+          .datum(data)
+          .attr("class", "area")
+          .attr("fill", "url(#line-gradient)")
+          .attr("d", area)
+          .style("opacity", 0)
+          .transition()
+          .duration(1000)
+          .style("opacity", 1);
+
+        // Animate the line
+        const path = svg
+          .append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", "#4F46E5")
+          .attr("stroke-width", 3)
+          .attr("d", line);
+
+        const pathLength = path.node().getTotalLength();
+
+        path
+          .attr("stroke-dasharray", pathLength + " " + pathLength)
+          .attr("stroke-dashoffset", pathLength)
+          .transition()
+          .duration(2000)
+          .attr("stroke-dashoffset", 0);
+
+        // Add animated dots
+        svg
+          .selectAll(".dot")
+          .data(data)
+          .enter()
+          .append("circle")
+          .attr("class", "dot")
+          .attr("cx", (d) => x(d.date))
+          .attr("cy", (d) => y(d.average))
+          .attr("r", 0)
+          .attr("fill", "#4F46E5")
+          .append("title")
+          .text((d) => `平均薪资: ${d.average}k`)
+          .selection()
+          .transition()
+          .delay((d, i) => 2000 + i * 100)
+          .duration(500)
+          .attr("r", 5);
+      }
+
+      async function initializeCharts() {
+        // Clear previous charts before redrawing
+        d3.select("#salaryChart").selectAll("*").remove();
+        d3.select("#averageSalaryChart").selectAll("*").remove();
+
+        const data = await fetchSalaryData();
+        if (data.salaryRanges && data.averageSalaries) {
+          // Parse dates for average salary chart
+          data.averageSalaries = data.averageSalaries.map((d) => ({
+            ...d,
+            date: new Date(d.date)
+          }));
+
+          createSalaryRangeChart(data.salaryRanges);
+          createAverageSalaryChart(data.averageSalaries);
+        }
+      }
+
+      window.addEventListener("load", initializeCharts);
+      window.addEventListener("resize", initializeCharts);
+    </script>
+  </body>
+</html>

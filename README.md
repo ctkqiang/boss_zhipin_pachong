@@ -62,10 +62,37 @@ curl "http://localhost:8080/api/jobs?keyword=Java"
 
 ## API 文档
 
+### 主页面
+
+**请求信息：**
+- 方法：`GET`
+- 路径：`/`
+- Content-Type: `text/html`
+
+![index](./assets/index.png)
+
+**响应：**
+返回职位搜索主页面，包含搜索表单和实时职位列表展示。
+
+### 数据分析页面
+
+**请求信息：**
+- 方法：`GET`
+- 路径：`/analysis`
+- Content-Type: `text/html`
+
+![analysis](./assets/analysis.png)
+
+**响应：**
+返回职位数据分析页面，展示：
+- 薪资分布统计
+- 技能需求热度
+- 地区分布情况
+- 经验要求分析
+
 ### 获取职位列表
 
 **请求信息：**
-
 - 方法：`GET`
 - 路径：`/api/jobs`
 - Content-Type: `application/json`
@@ -76,7 +103,6 @@ curl "http://localhost:8080/api/jobs?keyword=Java"
 | keyword | String | 是 | 职位搜索关键词 | "Java 开发" |
 
 **响应格式：**
-
 ```json
 {
   "code": 0,
@@ -93,6 +119,175 @@ curl "http://localhost:8080/api/jobs?keyword=Java"
   ]
 }
 ```
+
+## 系统运行示例
+
+<details>
+<summary>🚀 点击查看运行日志</summary>
+
+```console
+. \_**\_ \_ ** \_ \_
+/\\ / **_'_ ** \_ _(_)_ \_\_ \_\_ _ \ \ \ \
+( ( )\_** | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/ \_**)| |_)| | | | | || (_| | ) ) ) )
+' |\_**\_| .**|_| |_|_| |_\__, | / / / /
+=========|_|==============|_\_\_/=/_/_/_/
+:: Spring Boot :: (v2.7.18)
+
+2025-03-14 21:56:29.470 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : Starting BossZhipinPachongApplication using Java 20.0.1 on M2.local with PID 66470 (/Users/ctkqiang/Documents/上饶满星科技有限公司/boss_zhipin_pachong/target/classes started by ctkqiang in /Users/ctkqiang/Documents/上饶满星科技有限公司/boss_zhipin_pachong)
+2025-03-14 21:56:29.471 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : No active profile set, falling back to 1 default profile: "default"
+2025-03-14 21:56:29.642 INFO 66470 --- [ restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer : Tomcat initialized with port(s): 8080 (http)
+2025-03-14 21:56:29.643 INFO 66470 --- [ restartedMain] o.apache.catalina.core.StandardService : Starting service [Tomcat]
+2025-03-14 21:56:29.643 INFO 66470 --- [ restartedMain] org.apache.catalina.core.StandardEngine : Starting Servlet engine: [Apache Tomcat/9.0.83]
+2025-03-14 21:56:29.657 INFO 66470 --- [ restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/] : Initializing Spring embedded WebApplicationContext
+2025-03-14 21:56:29.657 INFO 66470 --- [ restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 183 ms
+2025-03-14 21:56:29.675 INFO 66470 --- [ restartedMain] x.c.b.Database.DatabaseHandler : 职位表创建成功
+2025-03-14 21:56:29.675 INFO 66470 --- [ restartedMain] x.c.b.Database.DatabaseHandler : 数据库连接成功
+2025-03-14 21:56:29.676 INFO 66470 --- [ restartedMain] x.c.b.Database.DatabaseHandler : 职位表创建成功
+2025-03-14 21:56:29.676 INFO 66470 --- [ restartedMain] x.c.b.Database.DatabaseHandler : 数据库连接成功
+2025-03-14 21:56:29.715 INFO 66470 --- [ restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping : Adding welcome page template: index
+2025-03-14 21:56:29.749 INFO 66470 --- [ restartedMain] o.s.b.d.a.OptionalLiveReloadServer : LiveReload server is running on port 35729
+2025-03-14 21:56:29.781 INFO 66470 --- [ restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer : Tomcat started on port(s): 8080 (http) with context path ''
+2025-03-14 21:56:29.786 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : Started BossZhipinPachongApplication in 0.374 seconds (JVM running for 119.091)
+2025-03-14 21:56:29.789 INFO 66470 --- [ restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2025-03-14 21:56:29.790 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : [BOSS 直聘] 系统已启动...
+2025-03-14 21:56:29.792 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : ========= 系统信息 =========
+2025-03-14 21:56:29.792 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : Java 版本: 20.0.1 (Oracle Corporation)
+2025-03-14 21:56:29.792 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : 操作系统: Mac OS X 15.0.1 (aarch64)
+2025-03-14 21:56:29.792 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : Maven 版本: 3.9.6
+2025-03-14 21:56:29.792 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : Spring 版本: 5.3.31
+2025-03-14 21:56:29.793 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : 应用名称: BOSS 直聘爬虫
+2025-03-14 21:56:29.793 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : 开发者: 钟智强
+2025-03-14 21:56:29.793 INFO 66470 --- [ restartedMain] x.c.b.BossZhipinPachongApplication : ===========================
+2025-03-14 21:56:39.845 INFO 66470 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/] : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-03-14 21:56:39.846 INFO 66470 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet : Initializing Servlet 'dispatcherServlet'
+2025-03-14 21:56:39.852 INFO 66470 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet : Completed initialization in 6 ms
+2025-03-14 21:56:50.042 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 12-15K | Xptah
+2025-03-14 21:56:50.043 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.043 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 18-35K·15 薪 | 半糖去冰科技
+2025-03-14 21:56:50.043 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.043 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 20-40K | 蔚蓝智能科技
+2025-03-14 21:56:50.043 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.043 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 30-40K·16 薪 | 京东物流
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.044 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 10-15K·13 薪 | 池骋网络
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.044 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 6-11K | 山东亚云信息技术
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.044 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 15-16K | 宇泛智能
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.044 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 18-30K | 千讯云创
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.044 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 7-12K | 绘智科教
+2025-03-14 21:56:50.044 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 成功解析职位: | | 15-30K | 北京经华智业教育...
+2025-03-14 21:56:50.045 ERROR 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 解析职位条目时出错: Index 4 out of bounds for length 4
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : 共找到 10 个职位信息
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : ========== 职位列表 ==========
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: Xptah
+薪资: 12-15K
+地点:
+经验: 1-3 年
+技能: 成都, 大专, Flutter
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 半糖去冰科技
+薪资: 18-35K
+地点:
+经验: 1-3 年
+技能: 北京, 本科, Android 开发经验
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 蔚蓝智能科技
+薪资: 20-40K
+地点:
+经验: 3-5 年
+技能: 南京, 本科, C++, 通信相关专业, 技术方案规划
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 京东物流
+薪资: 30-40K
+地点:
+经验: 5-10 年
+技能: 北京, 本科, flutter, 跨端开发
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 池骋网络
+薪资: 10-15K
+地点:
+经验: 1-3 年
+技能: 广州, 大专, 功能开发, 混合开发经验, 混合开发
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 山东亚云信息技术
+薪资: 6-11K
+地点:
+经验: 1-3 年
+技能: 日照, 大专, Flutter
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 宇泛智能
+薪资: 15-16K
+地点:
+经验: 3-5 年
+技能: 杭州, 本科, Android 客户端产品研发, 计算机/软件工程相关专业, 通信相关专业
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 千讯云创
+薪资: 18-30K
+地点:
+经验: 年终奖金丰厚
+技能: 深圳, 大专, Android 开发经验, Android 客户端产品研发
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 绘智科教
+薪资: 7-12K
+地点:
+经验: 1-3 年
+技能: 广州, 大专, Java, CSS, 后端开发经验
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper :
+职位:
+公司: 北京经华智业教育...
+薪资: 15-30K
+地点:
+经验: 5-10 年
+技能: 北京, 本科, Android 客户端产品研发, 架构设计/优化, Flutter
+
+---
+
+2025-03-14 21:56:50.045 INFO 66470 --- [nio-8080-exec-4] x.c.b.Controller.Scrapper : ============================
+2025-03-14 21:56:50.062 INFO 66470 --- [nio-8080-exec-4] x.c.b.Database.DatabaseHandler : 成功保存 10 个职位信息
+```
+</details>
 
 
 ## 数据库结构
