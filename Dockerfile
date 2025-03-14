@@ -1,28 +1,12 @@
-# Use OpenJDK 11 as base image
-FROM openjdk:11-jdk-slim
+FROM maven:3.8-openjdk-11-slim AS builder
 
-# Set working directory
-WORKDIR /app
+FROM openjdk:25-jdk-slim
 
-# Copy maven files
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-
-# Copy source code
-COPY src src
-
-# Make mvnw executable
-RUN chmod +x mvnw
-
-# Build the application
-RUN ./mvnw package -DskipTests
-
-# Expose port 8080
 EXPOSE 8080
 
-# Set the startup command
-CMD ["java", "-jar", "target/boss_zhipin_pachong-1.0.0.jar"]
+ENV SPRING_PROFILES_ACTIVE=prod
+
+ENTRYPOINT ["mvn", "spring-boot:run"]
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
