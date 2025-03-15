@@ -23,7 +23,7 @@ EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Set the startup command
-CMD ["java", "-jar", "target/boss_zhipin_pachong-1.0.0.jar"]
+CMD ["java", "-jar", "target/boss_zhipin_pachong-0.0.1-SNAPSHOT.jar"]
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
