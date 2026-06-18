@@ -1,345 +1,104 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BOSS直聘爬虫</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-      rel="stylesheet"
-    />
-  </head>
-  <body class="bg-gray-50">
-    
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BOSS直聘爬虫 2026</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet"/>
+<style>
+:root { --p: #ec4899; --p2: #f9a8d4; }
+body { background: linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%); min-height:100vh; }
+.card { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(236,72,153,0.1); transition:all .3s; }
+.card:hover { transform:translateY(-4px); box-shadow:0 12px 28px rgba(236,72,153,0.18); }
+.tag { background:#fdf2f8; border:1px solid var(--p2); color:var(--p); border-radius:20px; padding:2px 10px; font-size:13px; }
+.btn { background:linear-gradient(135deg,var(--p),#db2777); color:white; border-radius:12px; padding:10px 28px; font-weight:600; border:none; cursor:pointer; transition:all .3s; }
+.btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(236,72,153,0.35); }
+input[type=text] { border:2px solid #f9a8d4; border-radius:12px; padding:10px 16px; width:100%; outline:none; transition:all .3s; }
+input[type=text]:focus { border-color:var(--p); box-shadow:0 0 0 3px rgba(236,72,153,0.15); }
+.spinner { display:inline-block; width:24px; height:24px; border:3px solid #fce7f3; border-top-color:var(--p); border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<nav class="bg-white/80 backdrop-blur shadow-sm sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+    <span class="text-lg font-bold text-pink-600">BOSS直聘爬虫 2026</span>
+    <div class="flex gap-6 text-sm">
+      <a href="/" class="text-pink-600 border-b-2 border-pink-500 pb-1 font-medium">搜索</a>
+      <a href="/analysis" class="text-gray-500 hover:text-pink-500">数据分析</a>
+    </div>
+  </div>
+</nav>
 
-    <style>
-      :root {
-        --primary-color: #ff69b4;
-        --secondary-color: #ffb6c1;
-        --accent-color: #ffc0cb;
-      }
+<div class="max-w-4xl mx-auto px-4 py-10">
+  <div class="card p-6 mb-8 animate__animated animate__fadeIn">
+    <h2 class="text-xl font-bold text-pink-600 mb-4 text-center">搜索 BOSS直聘 职位</h2>
+    <form id="searchForm" class="flex gap-3">
+      <input type="text" id="keyword" placeholder="输入关键词, 例如: Java开发, golang, flutter..." required/>
+      <button type="submit" class="btn whitespace-nowrap">搜索</button>
+    </form>
+    <div class="flex gap-2 mt-3 flex-wrap">
+      <span onclick="quickSearch('Java开发')" class="tag cursor-pointer hover:bg-pink-100">Java开发</span>
+      <span onclick="quickSearch('golang')" class="tag cursor-pointer hover:bg-pink-100">golang</span>
+      <span onclick="quickSearch('flutter')" class="tag cursor-pointer hover:bg-pink-100">flutter</span>
+      <span onclick="quickSearch('前端')" class="tag cursor-pointer hover:bg-pink-100">前端</span>
+      <span onclick="quickSearch('数据分析')" class="tag cursor-pointer hover:bg-pink-100">数据分析</span>
+      <span onclick="quickSearch('产品经理')" class="tag cursor-pointer hover:bg-pink-100">产品经理</span>
+    </div>
+  </div>
 
-      .search-container {
-        background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
-        border-radius: 20px;
-        box-shadow: 0 8px 20px rgba(255, 105, 180, 0.15);
-        transition: all 0.3s ease;
-      }
+  <div id="status" class="text-center py-8 text-gray-400">输入关键词开始搜索</div>
+  <div id="jobList" class="space-y-4"></div>
+</div>
 
-      .search-container:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 25px rgba(255, 105, 180, 0.2);
-      }
+<script>
+const API = '/api/jobs';
 
-      .search-input {
-        border: 2px solid var(--primary-color);
-        border-radius: 15px;
-        transition: all 0.3s ease;
-      }
+function quickSearch(kw) {
+  document.getElementById('keyword').value = kw;
+  document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+}
 
-      .search-input:focus {
-        box-shadow: 0 0 15px rgba(255, 105, 180, 0.3);
-        border-color: var(--secondary-color);
-      }
+document.getElementById('searchForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const kw = document.getElementById('keyword').value.trim();
+  if (!kw) return;
+  const list = document.getElementById('jobList');
+  const status = document.getElementById('status');
+  list.innerHTML = '';
+  status.innerHTML = '<div class="spinner"></div><p class="mt-2 text-gray-400">搜索中...</p>';
 
-      .search-button {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        border-radius: 15px;
-        transition: all 0.3s ease;
-      }
-
-      .search-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-      }
-
-      .job-card {
-        border-radius: 15px;
-        background: white;
-        transition: all 0.3s ease;
-      }
-
-      .job-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 25px rgba(255, 105, 180, 0.2);
-      }
-
-      .tag {
-        background: linear-gradient(45deg, #fff5f5, #fff0f5);
-        border: 1px solid var(--primary-color);
-        color: var(--primary-color);
-        border-radius: 20px;
-        padding: 4px 12px;
-        transition: all 0.3s ease;
-      }
-
-      .tag:hover {
-        background: var(--primary-color);
-        color: white;
-      }
-    </style>
-
-    <body class="bg-pink-50">
-      <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-          <div class="flex justify-between h-16">
-            <div class="flex">
-              <div class="flex-shrink-0 flex items-center">
-                <span class="text-xl font-bold text-pink-500">✨ BOSS直聘职位搜索 ✨</span>
-              </div>
-              <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                <a
-                  href="/"
-                  class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                >
-                  首页
-                </a>
-                <a
-                  href="/analysis"
-                  class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                >
-                  数据分析
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="animate__animated animate__fadeIn">
-          <div class="search-container p-8">
-            <h2 class="text-2xl font-bold text-pink-500 mb-6 text-center">
-              💼 找到你心仪的工作 💕
-            </h2>
-            <form id="searchForm" class="space-y-6">
-              <div class="flex space-x-4">
-                <input
-                  type="text"
-                  id="keyword"
-                  class="search-input flex-1 px-4 py-2"
-                  placeholder="输入职位关键词..."
-                  required
-                />
-                <button type="submit" class="search-button px-6 py-2 text-white font-medium">
-                  🔍 搜索
-                </button>
-              </div>
-            </form>
-          </div>
-
-
-          <!-- Remove 'hidden' class to show by default -->
-          <div id="results" class="mt-8 animate__animated animate__fadeIn">
-            <h4 id="resultTitle" class="text-xl font-medium text-pink-500 mb-6">✨ 全部职位</h4>
-            <div id="jobList" class="space-y-6"></div>
-          </div>
-
-          <script>
-            // Function to render job cards
-            function renderJobs(jobs, isSearch = false) {
-              const jobList = document.getElementById("jobList");
-              const resultTitle = document.getElementById("resultTitle");
-              
-              jobList.innerHTML = "";
-              if (jobs && jobs.length > 0) {
-                resultTitle.textContent = isSearch ? `✨ 搜索结果 (${jobs.length}个)` : "✨ 全部职位";
-                jobs.forEach((job, index) => {
-                  jobList.innerHTML += `
-                    <div class="job-card p-6 animate__animated animate__fadeInUp" style="animation-delay: ${index * 0.1}s">
-                      <div class="flex justify-between items-start">
-                        <h5 class="text-xl font-bold text-pink-500">${job.companyName}</h5>
-                        <span class="tag">
-                          💰 ${job.salary}
-                        </span>
-                      </div>
-                      <div class="mt-4 flex items-center text-sm text-gray-500">
-                        <span class="mr-2">📍</span> ${job.location}
-                      </div>
-                      <div class="mt-4 flex flex-wrap gap-2">
-                        <span class="tag">
-                          💼 ${job.description}
-                        </span>
-                        ${job.tagList.map(tag => `
-                          <span class="tag">
-                            ✨ ${tag}
-                          </span>
-                        `).join('')}
-                      </div>
-                    </div>
-                  `;
-                });
-              } else {
-                resultTitle.textContent = "✨ 搜索结果";
-                jobList.innerHTML = `
-                  <div class="animate__animated animate__fadeIn rounded-md bg-yellow-50 p-4">
-                    <div class="flex">
-                      <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                      </svg>
-                    </div>
-                    <div class="ml-3">
-                      <h3 class="text-sm font-medium text-yellow-800">未找到相关职位</h3>
-                    </div>
-                  </div>
-                `;
-              }
-            }
-
-            // Load all jobs when page loads
-            window.addEventListener('DOMContentLoaded', async () => {
-              const jobList = document.getElementById("jobList");
-              
-              jobList.innerHTML = `
-                <div class="animate__animated animate__pulse flex justify-center py-8">
-                  <div class="text-gray-500">加载中...</div>
-                </div>
-              `;
-
-              try {
-                const response = await fetch('/api/jobs');
-                const data = await response.json();
-                renderJobs(data);
-              } catch (error) {
-                jobList.innerHTML = `
-                  <div class="animate__animated animate__fadeIn rounded-md bg-red-50 p-4">
-                    <div class="flex">
-                      <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                      </div>
-                      <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">加载失败，请刷新页面重试</h3>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }
-            });
-
-            // Handle search
-            document.getElementById("searchForm").addEventListener("submit", async (e) => {
-              e.preventDefault();
-              const keyword = document.getElementById("keyword").value;
-              const jobList = document.getElementById("jobList");
-
-              jobList.innerHTML = `
-                <div class="animate__animated animate__pulse flex justify-center py-8">
-                  <div class="text-gray-500">搜索中...</div>
-                </div>
-              `;
-
-              try {
-                const response = await fetch(`/api/jobs?keyword=${encodeURIComponent(keyword)}`);
-                const data = await response.json();
-                renderJobs(data, true);
-              } catch (error) {
-                jobList.innerHTML = `
-                  <div class="animate__animated animate__fadeIn rounded-md bg-red-50 p-4">
-                    <div class="flex">
-                      <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                      </div>
-                      <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">搜索失败，请稍后重试</h3>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }
-            });
-          </script>
-        </div>
-      </div>
-
-      <script>
-        document
-          .getElementById("searchForm")
-          .addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const keyword = document.getElementById("keyword").value;
-            const results = document.getElementById("results");
-            const jobList = document.getElementById("jobList");
-
-            // Show loading state
-            jobList.innerHTML = `
-            <div class="animate__animated animate__pulse flex justify-center py-8">
-              <div class="text-gray-500">搜索中...</div>
-            </div>
-          `;
-            results.classList.remove("hidden");
-
-            try {
-              const response = await fetch(
-                `/api/jobs?keyword=${encodeURIComponent(keyword)}`
-              );
-              const data = await response.json();
-
-              jobList.innerHTML = "";
-              if (data && data.length > 0) {
-                data.forEach((job, index) => {
-                  jobList.innerHTML += `
-                  <div class="job-card p-6 animate__animated animate__fadeInUp" style="animation-delay: ${index * 0.1}s">
-                    <div class="flex justify-between items-start">
-                      <h5 class="text-xl font-bold text-pink-500">${job.companyName}</h5>
-                      <span class="tag">
-                        💰 ${job.salary}
-                      </span>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm text-gray-500">
-                      <span class="mr-2">📍</span> ${job.location}
-                    </div>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                      <span class="tag">
-                        💼 ${job.description}
-                      </span>
-                      ${job.tagList.map(tag => `
-                        <span class="tag">
-                          ✨ ${tag}
-                        </span>
-                      `).join('')}
-                    </div>
-                  </div>
-                `;
-                });
-              } else {
-                jobList.innerHTML = `
-                <div class="animate__animated animate__fadeIn rounded-md bg-yellow-50 p-4">
-                  <div class="flex">
-                    <div class="flex-shrink-0">
-                      <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                      </svg>
-                    </div>
-                    <div class="ml-3">
-                      <h3 class="text-sm font-medium text-yellow-800">未找到相关职位</h3>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }
-          } catch (error) {
-            jobList.innerHTML = `
-            <div class="animate__animated animate__fadeIn rounded-md bg-red-50 p-4">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-red-800">搜索失败，请稍后重试</h3>
-                </div>
-              </div>
-            </div>
-          `;
-          }
-        });
-    </script>
-  </body>
+  try {
+    const resp = await fetch(API + '?keyword=' + encodeURIComponent(kw) + '&page=1&pageSize=10');
+    const json = await resp.json();
+    if (json.code !== 0) {
+      status.innerHTML = '<div class="bg-yellow-50 text-yellow-800 rounded-xl p-4">' + (json.error || '未找到结果') + '</div>';
+      return;
+    }
+    const jobs = json.data || [];
+    if (jobs.length === 0) {
+      status.innerHTML = '<div class="bg-yellow-50 text-yellow-800 rounded-xl p-4">未找到匹配的职位 — BOSS直聘可能限制了请求，请稍后再试</div>';
+      return;
+    }
+    status.innerHTML = '<p class="text-gray-500 mb-2">找到 <b class="text-pink-600">' + json.total + '</b> 个职位</p>';
+    jobs.forEach((job, i) => {
+      const skills = (job.skills || job.tagList || []).map(t => '<span class="tag">' + t + '</span>').join('');
+      list.innerHTML += '<div class="card p-5 animate__animated animate__fadeInUp" style="animation-delay:' + (i*0.05) + 's">'
+        + '<div class="flex justify-between items-start"><div>'
+        + '<h3 class="font-bold text-lg text-gray-800">' + (job.title || '未知职位') + '</h3>'
+        + '<p class="text-gray-500 text-sm mt-1">' + (job.companyName || job.company_name || '') + '</p>'
+        + '</div>'
+        + '<span class="tag text-base font-semibold">' + (job.salary || '薪资面议') + '</span>'
+        + '</div>'
+        + '<div class="mt-3 flex items-center text-sm text-gray-400"><span class="mr-1">📍</span>' + (job.location || '未知') + '</div>'
+        + (skills ? '<div class="mt-3 flex flex-wrap gap-1">' + skills + '</div>' : '')
+        + '</div>';
+    });
+  } catch (err) {
+    status.innerHTML = '<div class="bg-red-50 text-red-700 rounded-xl p-4">请求失败: ' + err.message + '</div>';
+  }
+});
+</script>
+</body>
 </html>
