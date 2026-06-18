@@ -1,30 +1,27 @@
-# Use a stable Java version
-FROM openjdk:11-jdk-slim
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /workspace
 
-# Set working directory
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+
+COPY src src
+RUN ./mvnw package -DskipTests -B
+
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copy maven files
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-COPY src src
+RUN addgroup -S app && adduser -S app -G app
+USER app
 
-# Make mvnw executable
-RUN chmod +x mvnw
+COPY --from=build /workspace/target/boss_zhipin_pachong-*.jar /app/app.jar
 
-# Build the application
-RUN ./mvnw package -DskipTests
+EXPOSE 8000
 
-# Expose port 8080
-EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD wget -qO- http://localhost:8000/api/health || exit 1
 
-# Add environment variable for Spring
 ENV SPRING_PROFILES_ACTIVE=prod
+ENV JAVA_OPTS="-Xmx512m -Xms128m"
 
-# Set the startup command
-CMD ["java", "-jar", "target/boss_zhipin_pachong-0.0.1-SNAPSHOT.jar"]
-
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:8080/ || exit 1
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

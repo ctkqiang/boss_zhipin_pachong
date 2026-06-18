@@ -1,96 +1,109 @@
 package xin.ctkqiang.boss_zhipin_pachong.Model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * BOSS直聘职位实体。
+ *
+ * <p>对应BOSS直聘搜索结果中的单条职位数据，包含职位名称、公司、薪资、
+ * 地点、经验要求、技能标签、联系人及详情链接。</p>
+ */
 public class Job {
-    private String Title;
-    private String Salary;
-    private String CompanyName;
-    private String Location;
-    private String Description;
-    private String[] TagList;
-    private String PersonInCharge;
+
+    @JsonProperty("title")
+    private String title;
+
+    @JsonProperty("company_name")
+    private String companyName;
+
+    @JsonProperty("salary")
+    private String salary;
+
+    @JsonProperty("location")
+    private String location;
+
+    @JsonProperty("experience")
+    private String experience;
+
+    @JsonProperty("skills")
+    private String[] skills;
+
+    @JsonProperty("contact")
+    private String contact;
+
+    @JsonProperty("url")
     private String url;
 
-    public Job(String Title, String CompanyName, String Salary, String Location, String Description, String[] TagList,
-            String PersonInCharge, String url) {
-        this.Title = Title;
-        this.CompanyName = CompanyName;
-        this.Salary = Salary.replaceAll("·\\d+薪", ""); // Remove "·14薪" etc.
-        this.Location = Location;
-        this.Description = Description;
-        this.TagList = TagList;
-        this.PersonInCharge = PersonInCharge.replaceAll("·.*$", ""); // Clean up title suffix
+    @JsonProperty("created_at")
+    private String createdAt;
+
+    public Job() {}
+
+    /**
+     * 构造一条职位记录。
+     *
+     * @param title       职位名称
+     * @param companyName 公司名称
+     * @param salary      薪资范围（原始字符串）
+     * @param location    工作地点
+     * @param experience  经验要求
+     * @param skills      技能标签数组
+     * @param contact     联系人/HR名称
+     * @param url         职位详情链接
+     */
+    public Job(String title, String companyName, String salary, String location,
+               String experience, String[] skills, String contact, String url) {
+        this.title = title;
+        this.companyName = companyName;
+        this.salary = salary != null ? salary.replaceAll("·\\d+薪", "") : null;
+        this.location = location;
+        this.experience = experience;
+        this.skills = skills != null ? skills.clone() : new String[0];
+        this.contact = contact != null ? contact.replaceAll("·.*$", "") : null;
         this.url = url;
     }
 
-    // Add toString method for better logging
     @Override
     public String toString() {
-        return String.format("%s | %s | %s | %s | %s",
-                Title, CompanyName, Salary, Location, PersonInCharge);
+        return String.format("%s | %s | %s | %s", title, companyName, salary, location);
     }
 
-    public void setTitle(String title) {
-        Title = title;
-    }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-    public void setSalary(String salary) {
-        Salary = salary;
-    }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
 
-    public void setCompanyName(String companyName) {
-        CompanyName = companyName;
-    }
+    public String getSalary() { return salary; }
+    public void setSalary(String salary) { this.salary = salary; }
 
-    public void setLocation(String location) {
-        Location = location;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public void setDescription(String description) {
-        Description = description;
-    }
+    public String getExperience() { return experience; }
+    public void setExperience(String experience) { this.experience = experience; }
 
-    public void setTagList(String[] tagList) {
-        TagList = tagList;
-    }
+    public String[] getSkills() { return skills != null ? skills.clone() : new String[0]; }
+    public void setSkills(String[] skills) { this.skills = skills != null ? skills.clone() : new String[0]; }
 
-    public void setPersonInCharge(String personInCharge) {
-        PersonInCharge = personInCharge;
-    }
+    public String getContact() { return contact; }
+    public void setContact(String contact) { this.contact = contact; }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
 
-    public String getTitle() {
-        return Title;
-    }
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 
-    public String getSalary() {
-        return Salary;
-    }
+    /** 兼容旧代码 */
+    public String getDescription() { return experience; }
+    public void setDescription(String description) { this.experience = description; }
 
-    public String getCompanyName() {
-        return CompanyName;
-    }
+    /** 兼容旧代码 */
+    public String[] getTagList() { return getSkills(); }
+    public void setTagList(String[] tags) { setSkills(tags); }
 
-    public String getLocation() {
-        return Location;
-    }
-
-    public String getDescription() {
-        return Description;
-    }
-
-    public String[] getTagList() {
-        return TagList;
-    }
-
-    public String getPersonInCharge() {
-        return PersonInCharge;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
+    /** 兼容旧代码 */
+    public String getPersonInCharge() { return contact; }
+    public void setPersonInCharge(String person) { this.contact = person; }
 }

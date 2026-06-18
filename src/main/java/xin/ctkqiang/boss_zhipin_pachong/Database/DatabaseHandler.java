@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,85 +19,32 @@ import org.springframework.stereotype.Component;
 import xin.ctkqiang.boss_zhipin_pachong.Model.Job;
 
 /**
- * SQLite数据库处理类
- * 
- * 该类负责管理与SQLite数据库的所有交互，主要功能包括：
- * 1. 数据库连接的建立与管理
- * 2. 数据表的创建与维护
- * 3. 职位数据的持久化存储
- * 4. 数据库连接的安全关闭
- * 
- * 数据库结构：
- * 表名：jobs
- * 字段：
- * - id: 自增主键
- * - title: 职位名称
- * - company: 公司名称
- * - salary: 薪资范围
- * - location: 工作地点
- * - experience: 经验要求
- * - skills: 技能要求（逗号分隔）
- * - created_at: 记录创建时间
- * 
- * 使用示例：
- * DatabaseHandler db = new DatabaseHandler();
- * db.saveJobs(jobsList);
- * db.close();
- * 
- * 注意事项：
- * 1. 确保数据库文件有写入权限
- * 2. 大批量数据写入时注意性能
- * 3. 使用完毕后必须调用close()方法
- * 4. 异常处理已集成日志记录
+ * SQLite数据库操作组件。
+ *
+ * <p>管理 jobs 表的DDL和CRUD操作。表结构包含职位名称、公司、薪资、地点、
+ * 经验要求、技能标签、联系人、职位链接及创建时间戳。</p>
  */
 @Component
 public class DatabaseHandler {
+
     private static final Logger LOG = LoggerFactory.getLogger(DatabaseHandler.class);
     private static final String DB_URL = "jdbc:sqlite:jobs.db";
     private Connection connection;
 
-    public DatabaseHandler() {
-        initializeDatabase();
-    }
-
-    /**
-     * 初始化数据库连接
-     * 
-     * 该方法在Spring容器启动时自动执行，完成：
-     * 1. 加载SQLite JDBC驱动
-     * 2. 建立数据库连接
-     * 3. 创建必要的数据表
-     * 
-     * @throws RuntimeException 当数据库初始化失败时
-     */
     @PostConstruct
     private void initializeDatabase() {
         try {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection(DB_URL);
+            connection.setAutoCommit(true);
             createJobsTable();
-            LOG.info("数据库连接成功");
+            LOG.info("SQLite 数据库连接成功: {}", DB_URL);
         } catch (SQLException | ClassNotFoundException e) {
-            LOG.error("数据库连接失败: {}", e.getMessage());
+            LOG.error("数据库初始化失败: {}", e.getMessage(), e);
             throw new RuntimeException("数据库初始化失败", e);
         }
     }
 
-    /**
-     * 创建职位信息表
-     * 
-     * 如果表不存在，则创建包含以下字段的表：
-     * - id: 自增主键
-     * - title: 职位名称（非空）
-     * - company: 公司名称（非空）
-     * - salary: 薪资范围
-     * - location: 工作地点
-     * - experience: 经验要求
-     * - skills: 技能要求
-     * - created_at: 记录创建时间戳
-     * 
-     * @throws SQLException 当表创建失败时
-     */
     private void createJobsTable() throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS jobs ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -106,54 +54,133 @@ public class DatabaseHandler {
                 + "location TEXT,"
                 + "experience TEXT,"
                 + "skills TEXT,"
+                + "contact TEXT,"
+                + "url TEXT,"
                 + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                 + ")";
 
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql);
-            LOG.info("职位表创建成功");
         }
+
+        // Add columns that may not exist in older schema versions.
+        for (String col : new String[]{"contact", "url"}) {
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("ALTER TABLE jobs ADD COLUMN " + col + " TEXT");
+            } catch (SQLException ignored) {
+            }
+        }
+
+        LOG.info("jobs 表就绪");
     }
 
     /**
-     * 批量保存职位信息
-     * 
-     * 将爬取到的职位信息批量保存到数据库中：
-     * 1. 使用预编译语句提高性能
-     * 2. 自动处理字段值为null的情况
-     * 3. 技能标签以逗号分隔存储
-     * 
-     * @param jobs 待保存的职位信息列表
+     * 批量保存职位记录。
+     *
+     * @param jobs 待保存的职位列表
      */
     public void saveJobs(List<Job> jobs) {
-        String sql = "INSERT INTO jobs (title, company, salary, location, experience, skills) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO jobs (title, company, salary, location, experience, skills, contact, url) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            int count = 0;
             for (Job job : jobs) {
                 pstmt.setString(1, job.getTitle());
                 pstmt.setString(2, job.getCompanyName());
                 pstmt.setString(3, job.getSalary());
                 pstmt.setString(4, job.getLocation());
-                pstmt.setString(5, job.getDescription());
-                pstmt.setString(6, String.join(",", job.getTagList()));
+                pstmt.setString(5, job.getExperience());
+                pstmt.setString(6, String.join(",", job.getSkills()));
+                pstmt.setString(7, job.getContact());
+                pstmt.setString(8, job.getUrl());
                 pstmt.executeUpdate();
+                count++;
             }
-            LOG.info("成功保存 {} 个职位信息", jobs.size());
+            LOG.info("成功保存 {} 条职位记录", count);
         } catch (SQLException e) {
-            LOG.error("保存职位信息失败: {}", e.getMessage());
+            LOG.error("保存职位失败: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * 安全关闭数据库连接
-     * 
-     * 在应用程序关闭时调用，确保：
-     * 1. 检查连接是否存在
-     * 2. 检查连接是否已关闭
-     * 3. 安全关闭连接
-     * 4. 记录关闭状态
+     * 查询全部职位。
+     *
+     * @return 职位列表
      */
+    public List<Job> getAllJobs() {
+        List<Job> jobs = new ArrayList<>();
+        String sql = "SELECT * FROM jobs ORDER BY created_at DESC";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String skillsStr = rs.getString("skills");
+                String[] skills = (skillsStr != null && !skillsStr.isEmpty())
+                        ? skillsStr.split(",") : new String[0];
+
+                Job job = new Job(
+                        rs.getString("title"),
+                        rs.getString("company"),
+                        rs.getString("salary"),
+                        rs.getString("location"),
+                        rs.getString("experience"),
+                        skills,
+                        rs.getString("contact"),
+                        rs.getString("url")
+                );
+                job.setCreatedAt(rs.getString("created_at"));
+                jobs.add(job);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询职位失败: {}", e.getMessage(), e);
+        }
+
+        return jobs;
+    }
+
+    /**
+     * 按关键词模糊搜索。
+     *
+     * @param keyword 搜索关键词
+     * @return 匹配的职位列表
+     */
+    public List<Job> searchJobs(String keyword) {
+        List<Job> jobs = new ArrayList<>();
+        String sql = "SELECT * FROM jobs WHERE title LIKE ? OR company LIKE ? "
+                + "ORDER BY created_at DESC LIMIT 100";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            String pattern = "%" + keyword + "%";
+            pstmt.setString(1, pattern);
+            pstmt.setString(2, pattern);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String[] skills = rs.getString("skills") != null
+                            ? rs.getString("skills").split(",") : new String[0];
+                    Job job = new Job(
+                            rs.getString("title"),
+                            rs.getString("company"),
+                            rs.getString("salary"),
+                            rs.getString("location"),
+                            rs.getString("experience"),
+                            skills,
+                            rs.getString("contact"),
+                            rs.getString("url")
+                    );
+                    jobs.add(job);
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("搜索职位失败: {}", e.getMessage(), e);
+        }
+
+        return jobs;
+    }
+
+    @PreDestroy
     public void close() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -161,37 +188,7 @@ public class DatabaseHandler {
                 LOG.info("数据库连接已关闭");
             }
         } catch (SQLException e) {
-            LOG.error("关闭数据库连接失败: {}", e.getMessage());
+            LOG.error("关闭数据库连接失败: {}", e.getMessage(), e);
         }
     }
-
-    public List<Job> getAllJobs() {
-        List<Job> jobs = new ArrayList<>();
-        String sql = "SELECT * FROM jobs";
-
-        try (Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                String[] skills = rs.getString("skills") != null ? rs.getString("skills").split(",") : new String[0];
-
-                Job job = new Job(
-                        rs.getString("title"),
-                        rs.getString("company"), // Changed from company_name to company
-                        rs.getString("salary"),
-                        rs.getString("location"),
-                        rs.getString("experience"),
-                        skills,
-                        "", // contact_url is not in the schema
-                        "" // company_info is not in the schema
-                );
-                jobs.add(job);
-            }
-        } catch (SQLException e) {
-            LOG.error("获取职位信息失败: {}", e.getMessage());
-        }
-
-        return jobs;
-    }
-
 }

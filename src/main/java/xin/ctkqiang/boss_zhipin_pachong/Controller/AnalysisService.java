@@ -1,137 +1,83 @@
 package xin.ctkqiang.boss_zhipin_pachong.Controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import xin.ctkqiang.boss_zhipin_pachong.Database.DatabaseHandler;
 import xin.ctkqiang.boss_zhipin_pachong.Model.Job;
 
-import java.util.*;
-
 /**
- * 职位数据分析服务
- * 主要功能：分析职位薪资数据，生成薪资范围统计和平均薪资趋势
+ * 职位数据分析服务。
+ *
+ * <p>对已爬取的职位数据进行薪资范围统计和平均薪资趋势分析。</p>
  */
 @Service
 public class AnalysisService {
+
     @Autowired
     private DatabaseHandler databaseHandler;
 
     /**
-     * 分析薪资数据
-     * 
-     * @return 包含薪资范围统计和平均薪资的Map
+     * 分析薪资数据。
+     *
+     * @return 包含 salaryRanges 和 averageSalaries 的 Map
      */
     public Map<String, Object> analyzeSalaryData() {
         List<Job> jobs = databaseHandler.getAllJobs();
         Map<String, Object> result = new HashMap<>();
-
         result.put("salaryRanges", calculateSalaryRanges(jobs));
         result.put("averageSalaries", calculateAverageSalaries(jobs));
-
+        result.put("totalJobs", jobs.size());
         return result;
     }
 
-    /**
-     * 计算薪资范围分布
-     * 
-     * @param jobs 职位列表
-     * @return 各个薪资范围及其对应的职位数量
-     */
     private List<Map<String, Object>> calculateSalaryRanges(List<Job> jobs) {
-        // 处理薪资范围统计
         Map<String, Integer> ranges = new TreeMap<>();
-
         for (Job job : jobs) {
-            String range = processSalaryRange(job.getSalary());
+            String range = normalizeSalaryRange(job.getSalary());
             ranges.put(range, ranges.getOrDefault(range, 0) + 1);
         }
-
-        // 转换为前端所需的数据格式
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : ranges.entrySet()) {
-            Map<String, Object> rangeData = new HashMap<>();
-            rangeData.put("range", entry.getKey());
-            rangeData.put("count", entry.getValue());
-            result.add(rangeData);
+        for (Map.Entry<String, Integer> e : ranges.entrySet()) {
+            result.add(Map.of("range", e.getKey(), "count", e.getValue()));
         }
-
         return result;
     }
 
-    /**
-     * 计算每日平均薪资
-     * 
-     * @param jobs 职位列表
-     * @return 每日平均薪资数据
-     */
     private List<Map<String, Object>> calculateAverageSalaries(List<Job> jobs) {
-        // 按日期统计薪资
-        Map<String, List<Double>> salariesByDate = new TreeMap<>();
-
-        // 获取当前日期
-        String currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd")
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd")
                 .format(new java.util.Date());
-
-        // 收集薪资数据
+        List<Double> values = new ArrayList<>();
         for (Job job : jobs) {
-            double avgSalary = calculateAverageSalary(job.getSalary());
-            salariesByDate.computeIfAbsent(currentDate, k -> new ArrayList<>()).add(avgSalary);
+            double avg = averageFromRange(job.getSalary());
+            if (avg > 0) values.add(avg);
         }
-
-        // 计算每日平均值
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<String, List<Double>> entry : salariesByDate.entrySet()) {
-            Map<String, Object> dateData = new HashMap<>();
-            dateData.put("date", entry.getKey());
-            dateData.put("average", calculateAverage(entry.getValue()));
-            result.add(dateData);
-        }
-
-        return result;
+        double avg = values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        return List.of(Map.of("date", today, "average", Math.round(avg * 100.0) / 100.0));
     }
 
-    /**
-     * 处理薪资范围字符串
-     * 
-     * @param salary 原始薪资字符串（如："10k-15k"）
-     * @return 标准化的薪资范围字符串
-     */
-    private String processSalaryRange(String salary) {
-        // 转换薪资范围格式，例如：10k-15k -> 10-15k
-        return salary.toLowerCase().replace("k", "").replace("K", "") + "k";
+    private String normalizeSalaryRange(String salary) {
+        if (salary == null || salary.isBlank()) return "未知";
+        return salary.replaceAll("[kK]", "k");
     }
 
-    /**
-     * 计算薪资范围的平均值
-     * 
-     * @param salary 薪资范围字符串
-     * @return 平均薪资值
-     */
-    private double calculateAverageSalary(String salary) {
-        // 计算薪资范围的平均值
-        String[] parts = salary.toLowerCase().replace("k", "").split("-");
+    private double averageFromRange(String salary) {
+        if (salary == null || salary.isBlank()) return 0;
+        String s = salary.toLowerCase().replace("k", "");
+        String[] parts = s.split("-");
         if (parts.length == 2) {
             try {
-                double min = Double.parseDouble(parts[0]);
-                double max = Double.parseDouble(parts[1]);
-                return (min + max) / 2;
+                return (Double.parseDouble(parts[0]) + Double.parseDouble(parts[1])) / 2.0;
             } catch (NumberFormatException e) {
                 return 0;
             }
         }
         return 0;
-    }
-
-    /**
-     * 计算数值列表的平均值
-     * 
-     * @param values 数值列表
-     * @return 平均值
-     */
-    private double calculateAverage(List<Double> values) {
-        if (values.isEmpty())
-            return 0;
-        return values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
     }
 }
