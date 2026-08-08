@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <jsoup.version>1.17.2</jsoup.version>
+        <jsoup.version>1.23.1</jsoup.version>
         <selenium.version>4.16.1</selenium.version>
     </properties>
 
